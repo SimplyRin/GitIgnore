@@ -19,6 +19,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.commons.io.IOUtils;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -117,6 +118,10 @@ public class Controller {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
+			JsonObject jsonObject = new JsonObject();
+			jsonObject.addProperty("name", System.getProperty("user.name"));
+			this.save(jsonObject);
 		} else {
 			String value = null;
 			try {
@@ -124,29 +129,32 @@ public class Controller {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			final String v = value;
-			mp.setFinishedTask(() -> {
-				JsonObject jsonObject = JsonParser.parseString(v).getAsJsonObject();
+			if (value != null) {
+				final String v = value;
+				mp.setFinishedTask(() -> {
+					JsonObject jsonObject = JsonParser.parseString(v).getAsJsonObject();
 
-				if (jsonObject.has("name")) {
-					Platform.runLater(() -> this.name.setText(jsonObject.get("name").getAsString()));
-				}
-				if (jsonObject.has("gitignore")) {
-					String gitignore = jsonObject.get("gitignore").getAsString();
-					Platform.runLater(() -> this.gitIgnoreBox.setValue(gitignore));
-				}
-				if (jsonObject.has("license")) {
-					String license = jsonObject.get("license").getAsString();
-					Platform.runLater(() -> this.licenseBox.setValue(license));
-				}
-			});
+					JsonElement name = jsonObject.get("name");
+					if (name != null && !name.isJsonNull()) {
+						Platform.runLater(() -> this.name.setText(name.getAsString()));
+					}
+					JsonElement gitignore = jsonObject.get("gitignore");
+					if (gitignore != null && !gitignore.isJsonNull()) {
+						Platform.runLater(() -> this.gitIgnoreBox.setValue(gitignore.getAsString()));
+					}
+					JsonElement license = jsonObject.get("license");
+					if (license != null && !license.isJsonNull()) {
+						Platform.runLater(() -> this.licenseBox.setValue(license.getAsString()));
+					}
+				});
+			}
 		}
 		mp.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				save();
+				save(null);
 			}
 		});
 	}
@@ -159,7 +167,7 @@ public class Controller {
 		// gitignore のダウンロード
 		MultiProcess mp = new MultiProcess();
 		mp.addProcess(() -> {
-			this.save();
+			this.save(null);
 		});
 		mp.addProcess(() -> {
 			try {
@@ -241,11 +249,13 @@ public class Controller {
 		return result;
 	}
 
-	public void save() {
-		JsonObject jsonObject = new JsonObject();
-		jsonObject.addProperty("name", this.name.getText());
-		jsonObject.addProperty("gitignore", this.gitIgnoreBox.getValue());
-		jsonObject.addProperty("license", this.licenseBox.getValue());
+	public void save(JsonObject jsonObject) {
+		if (jsonObject == null) {
+			jsonObject = new JsonObject();
+			jsonObject.addProperty("name", this.name.getText());
+			jsonObject.addProperty("gitignore", this.gitIgnoreBox.getValue());
+			jsonObject.addProperty("license", this.licenseBox.getValue());
+		}
 
 		System.out.println(jsonObject.toString());
 
