@@ -63,10 +63,14 @@ public class Controller {
 	@FXML private TextField year;
 
 	private Map<String, JsonObject> map = new HashMap<>();
-	//.gitignore, LICENCE の作成
+	private File folder;
+
 	@FXML
 	private void initialize()  {
 		new RinStream();
+
+		this.folder = new File(new File(System.getenv("APPDATA")), "GitIgnore-Creator");
+		this.folder.mkdirs();
 
 		MultiProcess mp = new MultiProcess();
 
@@ -111,7 +115,7 @@ public class Controller {
 		this.name.setText(System.getProperty("user.name"));
 		this.year.setText(String.valueOf(new Date().getYear() + 1900));
 
-		File file = new File("gitignore-creator.json");
+		File file = new File(this.folder, "gitignore-creator.json");
 		if (!file.exists()) {
 			try {
 				file.createNewFile();
@@ -132,6 +136,10 @@ public class Controller {
 			if (value != null) {
 				final String v = value;
 				mp.setFinishedTask(() -> {
+					JsonElement jsonElement = JsonParser.parseString(v);
+					if (jsonElement.isJsonNull()) {
+						return;
+					}
 					JsonObject jsonObject = JsonParser.parseString(v).getAsJsonObject();
 
 					JsonElement name = jsonObject.get("name");
@@ -221,7 +229,7 @@ public class Controller {
 	public String getConnection(String url) throws Exception {
 		System.out.println("URL: " + url);
 
-		File folder = new File("GitIgnore-Cache");
+		File folder = new File(this.folder, "GitIgnore-Cache");
 		folder.mkdirs();
 
 		String[] sp = url.split(Pattern.quote("/"));
@@ -259,7 +267,7 @@ public class Controller {
 
 		System.out.println(jsonObject.toString());
 
-		File file = new File("gitignore-creator.json");
+		File file = new File(this.folder, "gitignore-creator.json");
 		try {
 			FileWriter fileWriter = new FileWriter(file);
 			fileWriter.write(jsonObject.toString());
